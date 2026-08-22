@@ -1,0 +1,101 @@
+# CI pipeline (REPO-009, CI-001). Runs on every pull request and push to main.
+#
+# Implements the machine-enforceable checks that are honestly implementable at the current
+# repository state (adoption phase — no application code, no dependency manifest yet):
+#   commitlint    — GIT-006 (Conventional Commits)
+#   secret-scan   — SEC-020 / REPO-002 (gitleaks)
+#   repo-hygiene  — REPO-001/003/004/005 (required files present, tracking boundary respected)
+#   pr-size       — GIT-013 (warning only; never blocks, per accepted policy)
+#
+# Checks owed per the enforcement matrix but deferred until the code they check exists
+# (added in the same PR that introduces the toolchain/code — CI-002):
+#   CODE-001/002/003/010 (format, lint, types, complexity) · TEST-014/015 (coverage) ·
+#   SEC-019/SEC-028 (dependency vulnerability scan — needs a lockfile) · SEC-021 (SAST) ·
+#   ARCH-006 (boundary check) · DB-001 (migration ordering) · WEB-009/010/017 (a11y,
+#   performance budget, headers) · INFRA-018/020/021 (image checks) · GIT-010/CI-004 (release
+#   tagging/artifacts).
+#
+# Never weaken, skip, or bypass these jobs to make work pass (AGENT-013, AGENT-020).
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  commitlint:
+    name: Commit messages (GIT-006)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: commitlint.config.mjs
+
+  secret-scan:
+    name: Secret scanning (SEC-020)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  repo-hygiene:
+    name: Repository hygiene (REPO-001/003/004/005)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Required base files present (REPO-001, REPO-004)
+        run: |
+          missing=0
+          for f in README.md CLAUDE.md CODEOWNERS .gitignore \
+                   .github/PULL_REQUEST_TEMPLATE.md .env.example; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing required file: $f"
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - name: No tracked environment value files (REPO-003)
+        run: |
+          if git ls-files | grep -E '(^|/)\.env(\..+)?$' | grep -v '\.env\.example$'; then
+            echo "::error::Environment value file is tracked (REPO-003)"
+            exit 1
+          fi
+          echo "OK"
+      - name: No tracked build outputs (REPO-005)
+        run: |
+          if git ls-files | grep -E '(^|/)(node_modules|dist|build|coverage)/'; then
+            echo "::error::Build output or dependency directory is tracked (REPO-005)"
+            exit 1
+          fi
+          echo "OK"
+
+  pr-size:
+    name: PR size warning (GIT-013)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Warn above 400 changed lines (never blocks)
+        run: |
+          BASE='${{ github.event.pull_request.base.sha }}'
+          HEAD='${{ github.event.pull_request.head.sha }}'
+          LINES=$(git diff --numstat "$BASE" "$HEAD" -- . ':(exclude)pnpm-lock.yaml' \
+                  | awk '{a+=$1+$2} END {print a+0}')
+          echo "Changed lines: $LINES"
+          if [ "$LINES" -gt 400 ]; then
+            echo "::warning::PR exceeds 400 changed lines (GIT-013). Justify under '## Standards deviations' if it cannot be split (AGENT-009)."
+          fi

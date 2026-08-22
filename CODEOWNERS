@@ -1,0 +1,10 @@
+# CODEOWNERS — every top-level path has a resolvable owner (REPO-008).
+# Review routing per GIT-004: a qualified reviewer is an owner of the touched paths.
+
+# Default owner for the entire repository:
+*               @RPK-GIT
+
+# Explicit top-level path ownership:
+/decisions/     @RPK-GIT
+/playbook       @RPK-GIT
+/.github/       @RPK-GIT

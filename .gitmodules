@@ -1,0 +1,3 @@
+[submodule "playbook"]
+	path = playbook
+	url = https://github.com/RPK-GIT/Software-Engineering-Playbook.git
