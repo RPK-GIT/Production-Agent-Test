@@ -1,0 +1,13 @@
+# Dependency update automation, supporting SEC-019/SEC-028 (known-vulnerability policy).
+# Note: Dependabot alone does not satisfy SEC-019 (scan on every pipeline run) — a per-PR
+# scanner (osv-scanner) is added to ci.yml in the PR that introduces the first lockfile.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
