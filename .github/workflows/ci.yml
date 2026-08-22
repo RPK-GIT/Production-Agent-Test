@@ -32,7 +32,7 @@ jobs:
     name: Commit messages (GIT-006)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: wagoid/commitlint-github-action@v6
@@ -43,7 +43,7 @@ jobs:
     name: Secret scanning (SEC-020)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
@@ -54,7 +54,7 @@ jobs:
     name: Repository hygiene (REPO-001/003/004/005)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Required base files present (REPO-001, REPO-004)
         run: |
           missing=0
@@ -86,7 +86,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Warn above 400 changed lines (never blocks)
